@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
-import Input from './components/Input';
-import ClearFilters from './components/ClearFilters';
-import FilterCategorys from './components/FilterCategorys';
-import Card from './components/Card';
-import ErrorMessage from './components/ErrorMessage';
-import Loading from './components/Loading';
 import './App.css';
+import Card from './components/Card';
+import ClearFilters from './components/ClearFilters';
+import ErrorMessage from './components/ErrorMessage';
+import FilterCategorys from './components/FilterCategorys';
+import Input from './components/Input';
+import Loading from './components/Loading';
+import {
+  filterCategorys,
+  filterFullName,
+  filterNewUsers,
+} from './utils/formatter';
 
-const getDateToday = () => {
-  const date = new Date();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
-  const day = date.getDate();
-  return `${year}-${month}-${day}`;
+const CATEGORIES = {
+  REPUTATION: 'Reputation',
+  NEW_USERS: 'New users',
+  VOTERS: 'Voters',
+  EDITORS: 'Editors',
+  MODERATORS: 'Moderators',
 };
 
 const App = () => {
@@ -24,33 +29,27 @@ const App = () => {
   const fetchUsers = async (category = null, fullName = null) => {
     try {
       setLoading(true);
-      let url = 'https://my.api.mockaroo.com/usersFigma.json?key=6c5586a0';
-      if (category) {
-        if (category === 'New users') {
-          const createdAt = getDateToday();
-          url = `https://my.api.mockaroo.com/byCategory/usersFigma.json?key=6c5586a0&createdAt=${createdAt}`;
-        } else {
-          url = `https://my.api.mockaroo.com/byCategory/usersFigma.json?key=6c5586a0&category=${category}`;
-        }
-      }
-
-      if (fullName)
-        url = `https://my.api.mockaroo.com/byFullName/usersFigma.json?key=6c5586a0&fullName=${fullName}`;
-
+      let url = 'https://api.npoint.io/ff336f3dc8d871a81d27';
       const result = await fetch(url);
 
       if (!result.ok) {
         throw new Error(
-          `Erro na requisição: ${result.status} - ${result.statusText}`
+          `Erro na requisição: ${result.status} - ${result.statusText}. Tente novamente mais tarde.`
         );
       }
-      const data = await result.json();
+
+      let data = await result.json();
+
+      if (category && category !== CATEGORIES.NEW_USERS)
+        data = filterCategorys(category, data);
+      else data = filterNewUsers(data);
+
+      if (fullName) data = filterFullName(fullName, data);
 
       setData(data);
+      setLoading(false);
     } catch (error) {
       setError(error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -87,7 +86,7 @@ const App = () => {
       )}
       {loading && <Loading />}
       {error && !loading && <ErrorMessage>{error.message}</ErrorMessage>}
-      {data.length > 0 && (
+      {data.length > 0 && !loading && (
         <div className='containerCard'>
           {data.map(user => (
             <Card
